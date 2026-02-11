@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { Check, X, Loader2, Trash2, Upload } from 'lucide-react';
+import { Check, X, Loader2, Trash2, ImageDown } from 'lucide-react';
 import { downsizeImage, downloadFile, formatFileSize, type DownsizeSettings } from '../lib/image-utils';
 import { useTrust } from '../contexts/TrustContext';
 
@@ -146,7 +146,7 @@ export default function DownsizePanel() {
             onChange={handleFileInput}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
           />
-          <Upload className="w-14 h-14 mb-4 text-zinc-500" />
+          <ImageDown className="w-14 h-14 mb-4 text-zinc-500" />
           <p className="text-xl font-semibold text-zinc-200 mb-1">Drop images here</p>
           <p className="text-sm text-zinc-400">
             JPG, PNG, and WebP. Auto-resized and downloaded instantly.
