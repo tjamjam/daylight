@@ -1,22 +1,113 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import type { ReactNode } from 'react';
+
+export interface BlockedRequest {
+  id: number;
+  url: string;
+  method: string;
+  type: 'fetch' | 'xhr';
+  timestamp: number;
+}
 
 interface TrustContextType {
   photosProcessed: number;
   incrementPhotosProcessed: () => void;
+  isOnline: boolean;
+  blockedRequests: BlockedRequest[];
+  clearBlockedRequests: () => void;
 }
 
 const TrustContext = createContext<TrustContextType | undefined>(undefined);
 
+function isExternal(url: string): boolean {
+  try {
+    const parsed = new URL(url, window.location.origin);
+    if (parsed.protocol === 'ws:' || parsed.protocol === 'wss:') return false;
+    if (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') return false;
+    return parsed.origin !== window.location.origin;
+  } catch {
+    return false;
+  }
+}
+
 export function TrustProvider({ children }: { children: ReactNode }) {
   const [photosProcessed, setPhotosProcessed] = useState(0);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [blockedRequests, setBlockedRequests] = useState<BlockedRequest[]>([]);
+  const idRef = useRef(0);
+
+  const logBlocked = useCallback((url: string, method: string, type: 'fetch' | 'xhr') => {
+    setBlockedRequests((prev) => [
+      ...prev,
+      { id: ++idRef.current, url, method, type, timestamp: Date.now() },
+    ]);
+  }, []);
+
+  const clearBlockedRequests = useCallback(() => {
+    idRef.current = 0;
+    setBlockedRequests([]);
+  }, []);
+
+  // Patch fetch and XHR to block external requests
+  useEffect(() => {
+    const originalFetch = window.fetch;
+    window.fetch = function (input: RequestInfo | URL, init?: RequestInit) {
+      const url =
+        typeof input === 'string'
+          ? input
+          : input instanceof URL
+            ? input.href
+            : input.url;
+
+      if (isExternal(url)) {
+        const method = init?.method?.toUpperCase() || 'GET';
+        logBlocked(url, method, 'fetch');
+        return Promise.reject(new Error(`[Daylight] Blocked outbound ${method} to ${url}`));
+      }
+      return originalFetch.apply(this, [input, init] as Parameters<typeof originalFetch>);
+    };
+
+    const originalXhrOpen = XMLHttpRequest.prototype.open;
+    XMLHttpRequest.prototype.open = function (
+      method: string,
+      url: string | URL,
+      ...rest: [boolean?, string?, string?]
+    ) {
+      const urlStr = typeof url === 'string' ? url : url.href;
+      if (isExternal(urlStr)) {
+        logBlocked(urlStr, method.toUpperCase(), 'xhr');
+        // Open to a data URI so send() doesn't crash, but nothing goes out
+        return originalXhrOpen.call(this, method, 'data:text/plain,blocked', ...rest);
+      }
+      return originalXhrOpen.call(this, method, url, ...rest);
+    };
+
+    return () => {
+      window.fetch = originalFetch;
+      XMLHttpRequest.prototype.open = originalXhrOpen;
+    };
+  }, [logBlocked]);
+
+  // Online/offline
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   const incrementPhotosProcessed = () => {
-    setPhotosProcessed(prev => prev + 1);
+    setPhotosProcessed((prev) => prev + 1);
   };
 
   return (
-    <TrustContext.Provider value={{ photosProcessed, incrementPhotosProcessed }}>
+    <TrustContext.Provider
+      value={{ photosProcessed, incrementPhotosProcessed, isOnline, blockedRequests, clearBlockedRequests }}
+    >
       {children}
     </TrustContext.Provider>
   );

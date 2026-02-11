@@ -109,6 +109,77 @@ export async function compressImage(
   });
 }
 
+export interface DownsizeSettings {
+  maxWidth: number;
+  maxHeight: number;
+  quality: number; // 0–1
+  format: 'image/jpeg' | 'image/png' | 'image/webp';
+}
+
+export interface DownsizeResult {
+  blob: Blob;
+  originalWidth: number;
+  originalHeight: number;
+  newWidth: number;
+  newHeight: number;
+  originalSize: number;
+  newSize: number;
+  fileName: string;
+}
+
+export async function downsizeImage(file: File, settings: DownsizeSettings): Promise<DownsizeResult> {
+  const img = await loadImage(file);
+
+  const originalWidth = img.width;
+  const originalHeight = img.height;
+
+  let newWidth = originalWidth;
+  let newHeight = originalHeight;
+
+  if (newWidth > settings.maxWidth) {
+    newHeight = Math.round(newHeight * (settings.maxWidth / newWidth));
+    newWidth = settings.maxWidth;
+  }
+  if (newHeight > settings.maxHeight) {
+    newWidth = Math.round(newWidth * (settings.maxHeight / newHeight));
+    newHeight = settings.maxHeight;
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = newWidth;
+  canvas.height = newHeight;
+  const ctx = canvas.getContext('2d')!;
+  ctx.drawImage(img, 0, 0, newWidth, newHeight);
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          reject(new Error('Failed to encode image'));
+          return;
+        }
+
+        const ext = settings.format === 'image/png' ? '.png' : settings.format === 'image/webp' ? '.webp' : '.jpg';
+        const baseName = file.name.replace(/\.[^.]+$/, '');
+        const fileName = `${baseName}-resized${ext}`;
+
+        resolve({
+          blob,
+          originalWidth,
+          originalHeight,
+          newWidth,
+          newHeight,
+          originalSize: file.size,
+          newSize: blob.size,
+          fileName,
+        });
+      },
+      settings.format,
+      settings.format !== 'image/png' ? settings.quality : undefined
+    );
+  });
+}
+
 export async function resizeImage(
   file: File,
   maxWidth: number,
