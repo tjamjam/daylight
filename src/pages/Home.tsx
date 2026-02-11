@@ -27,25 +27,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Privacy proof */}
-      <div className="bg-gradient-to-b from-zinc-900 via-zinc-800/80 to-zinc-900 py-20">
-        <div className="container mx-auto px-4">
-          <div className="max-w-2xl mx-auto text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-3">
-              Zero network requests
-            </h2>
-            <p className="text-zinc-400">
-              Your images never leave this device. Verify it below, or turn off your Wi-Fi — everything still works.
-            </p>
-          </div>
-
-          <div className="max-w-2xl mx-auto">
-            <NetworkMonitor />
-          </div>
-        </div>
-      </div>
-
-      {/* More tools — compact */}
+      {/* More tools */}
       <div className="container mx-auto px-4 py-16">
         <div className="max-w-3xl mx-auto">
           <p className="text-sm text-zinc-400 text-center mb-6">More tools — all client-side, all free</p>
@@ -82,6 +64,24 @@ export default function Home() {
               <Maximize2 className="w-4 h-4 text-zinc-400 group-hover:text-amber-500 transition-colors mb-1.5" />
               <p className="text-sm font-medium text-zinc-300">Resize</p>
             </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Privacy proof */}
+      <div className="bg-gradient-to-b from-zinc-900 via-zinc-800/80 to-zinc-900 py-20">
+        <div className="container mx-auto px-4">
+          <div className="max-w-2xl mx-auto text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-3">
+              Zero network requests
+            </h2>
+            <p className="text-zinc-400">
+              Your images never leave this device. Verify it below, or turn off your Wi-Fi — everything still works.
+            </p>
+          </div>
+
+          <div className="max-w-2xl mx-auto">
+            <NetworkMonitor />
           </div>
         </div>
       </div>
