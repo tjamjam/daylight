@@ -68,18 +68,18 @@ export function TrustProvider({ children }: { children: ReactNode }) {
     };
 
     const originalXhrOpen = XMLHttpRequest.prototype.open;
-    XMLHttpRequest.prototype.open = function (
-      method: string,
-      url: string | URL,
-      ...rest: [boolean?, string?, string?]
-    ) {
-      const urlStr = typeof url === 'string' ? url : url.href;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    XMLHttpRequest.prototype.open = function (...args: any[]) {
+      const method = args[0] as string;
+      const url = args[1];
+      const urlStr = typeof url === 'string' ? url : (url as URL).href;
       if (isExternal(urlStr)) {
         logBlocked(urlStr, method.toUpperCase(), 'xhr');
         // Open to a data URI so send() doesn't crash, but nothing goes out
-        return originalXhrOpen.call(this, method, 'data:text/plain,blocked', ...rest);
+        args[1] = 'data:text/plain,blocked';
+        return originalXhrOpen.apply(this, args as Parameters<typeof originalXhrOpen>);
       }
-      return originalXhrOpen.call(this, method, url, ...rest);
+      return originalXhrOpen.apply(this, args as Parameters<typeof originalXhrOpen>);
     };
 
     return () => {
